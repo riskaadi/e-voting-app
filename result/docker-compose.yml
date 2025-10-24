@@ -1,0 +1,56 @@
+volumes:
+  db-data:
+
+networks:
+  micro-net:
+    driver: bridge
+
+services:
+  vote:
+    image: riskaadi1011/vote
+    build: ./vote
+    ports:
+      - 5000:80
+    depends_on:
+      - redis
+    networks:
+      - micro-net
+
+  redis:
+    image: redis:alpine
+    networks:
+      - micro-net
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+      - "./healthchecks:/healthchecks"
+    healthcheck:
+      test: /healthchecks/postgres.sh
+      interval: "5s"
+    networks:
+      - micro-net
+
+
+  result:
+    image: riskaadi1011/result
+    build: ./result
+    ports:
+      - 5001:80
+    depends_on:
+      - db
+    networks:
+      - micro-net
+
+  worker:
+    image: riskaadi1011/worker
+    build: ./worker
+    depends_on:
+      - redis
+      - db
+    networks:
+      - micro-net
